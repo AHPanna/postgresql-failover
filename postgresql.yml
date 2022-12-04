@@ -1,0 +1,6 @@
+---
+- hosts: postgresql
+  gather_facts: true
+  become: true # make sure that default user has sudo privilege escalation
+  roles:
+    - postgresql

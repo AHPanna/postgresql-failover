@@ -1,0 +1,11 @@
+---
+postgresql:
+  test:""
+
+# keepalived conf
+keepalived:
+  default_keepalived_password: "p@ssorwd"
+  default_keepalived_nic: "eth0" # get on machine the default nic avalaible by : `ip -c a`
+  default_keepalived_ip_vrrp: "192.168.1.100" # choose on what your dhcp server provide range and the ip must be avalaible.
+  priority_master: 100
+  priority_slave: 101

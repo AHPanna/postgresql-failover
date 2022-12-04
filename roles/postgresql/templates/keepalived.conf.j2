@@ -1,0 +1,28 @@
+
+vrrp_script postgresql_health {
+        script "/bin/bash /etc/keepalived/scripts/postgresql_health.sh"
+        interval 2
+        weight 2
+}
+vrrp_instance VI_1 {
+        interface {{ keepalived.default_keepalived_nic }}
+        state MASTER
+        virtual_router_id 51
+
+        {% if 'postgresql-master' in postgresql %}
+        priority {{ keepalived.priority_master }}
+        {% else %}
+        priority {{ keepalived.priority_slave }}
+        {% endif %}
+        
+        authentication {
+            auth_type PASS
+            auth_pass {{ keepalived.default_keepalived_password }}
+        }
+        track_script {
+            postgresql_health
+        }
+        virtual_ipaddress {
+                {{ keepalived.default_keepalived_ip_vrrp }}/24 dev {{ keepalived.default_keepalived_nic }}
+        }
+}
