@@ -1,0 +1,98 @@
+- name: 'Postgres > Tasks > install.yml | Install postgres yum repository '
+  package:
+    name: "https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
+    state: present
+    update_cache: yes
+    validate_certs: no
+  become: true
+
+- name: 'Postgres > Tasks > install.yml | Install postgres packages'
+  package:
+    name: ["epel-release", "postgresql{{ postgresql.server.version }}-server", "postgresql{{ postgresql.server.version }}", "postgresql{{ postgresql.server.version }}-libs", "python2-psycopg2", "python-pip"]
+    state: installed
+  become: true
+
+- name: 'Postgres > Tasks > install.yml | Install postgres packages'
+  package:
+    name: ["epel-release", "postgresql{{ postgresql.server.version }}-server", "postgresql{{ postgresql.server.version }}", "postgresql{{ postgresql.server.version }}-libs", "python2-psycopg2", "python-pip"]
+    state: installed
+  become: true
+
+- name: Install bottle python package on version 0.11
+  pip:
+    name: ipaddress
+
+- name: "Postgresql > Tasks > databases.yml | Create User, database and whitelist the usage"
+  block:
+    - name: 'Postgres > Tasks > install.yml | Check if PostgreSQL database is initialized.'
+      stat:
+        path: "{{ postgresql.directories.data }}/PG_VERSION"
+      register: pg_version
+
+    - name: 'Postgres > Tasks > install.yml | Ensure PostgreSQL database is initialized.'
+      command: "/usr/pgsql-{{ postgresql.server.version }}/bin/postgresql-{{ postgresql.server.version }}-setup initdb"
+      when: not pg_version.stat.exists
+
+    - name: 'Postgres > Tasks > install.yml | Create Archive Folder'
+      file:
+        path: "{{ postgresql.config.archive_folder }}"
+        state: directory
+        owner: "{{ postgresql.config.user }}"
+        group: "{{ postgresql.config.user }}"
+
+
+    - name: 'Postgres > Tasks > install.yml | Enable PostgreSQL Service database'
+      systemd:
+        name: "postgresql-{{ postgresql.server.version }}"
+        state: started
+        enabled: true
+
+    - name: 'Postgres > Tasks > install.yml | Setup postgresql configuration'
+      template:
+        src: "postgresql.conf.j2"
+        dest:  "{{ postgresql.config.conf }}"
+        owner: "{{ postgresql.config.user }}"
+        group: "{{ postgresql.config.user }}"
+        mode: 0644
+
+    - name: 'Postgres > Tasks > install.yml | Create replication user used for replication'
+      postgresql_user:
+        name: "{{ postgresql.replication.user }}"
+        password: "{{ postgresql.replication.password }}"
+        state: present
+        role_attr_flags: REPLICATION
+      become_user: "{{ postgresql.config.user }}"
+
+    - name: 'Postgres > Tasks > install.yml |Whitelisting replication user for localhost and IP'
+      postgresql_pg_hba:
+        dest: "{{ postgresql.config.pg_hba }}"
+        contype: host
+        databases: "{{ postgresql.replication.database }}"
+        users: "{{ postgresql.replication.user }}"
+        source: "{{ item }}"
+        method: trust
+      become_user: "{{ postgresql.config.user }}"
+      with_items:
+        - "{{ postgresql_master_ip }}"
+        - 127.0.0.1/32
+
+    - name: 'Postgres > Tasks > install.yml | Cluster mode: Update pg_hba.conf with slave IP'
+      postgresql_pg_hba:
+        dest: "{{ postgresql.config.pg_hba }}"
+        contype: host
+        databases: "{{ postgresql.replication.user }}"
+        users: "{{ postgresql.replication.user }}"
+        source: "{{ postgresql_slave_ip }}"
+        method: trust
+      become: true
+      become_user: "{{ postgresql.config.user }}"
+      when: postgresql.server.cluster == true
+
+    - name: 'Postgres > Tasks > install.yml | Enable PostgreSQL database'
+      systemd:
+        name: "postgresql-{{ postgresql.server.version }}"
+        state: restarted
+        enabled: true
+
+  become: true
+  run_once: true

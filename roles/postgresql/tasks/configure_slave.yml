@@ -1,0 +1,62 @@
+- name: 'Postgres > Tasks > configure_slave.yml | Stop postgresql database'
+  systemd:
+    name: "postgresql-{{ postgresql.server.version }}"
+    state: stopped
+  become: true
+
+- name: 'Postgres > Tasks > configure_slave.yml | Check master is running'
+  wait_for:
+    host:  "{{ postgresql_master_ip }}"
+    port: 5432
+
+- name: 'Postgres > Tasks > configure_slave.yml | Delete pgsql data folder'
+  file:
+    path: "{{ postgresql.directories.data }}"
+    state: absent
+  become: true
+  become_user: "{{ postgresql.config.user }}"
+
+
+- name: 'Postgres > Tasks > configure_slave.yml | Sync master and slave: Copy Master to slave'
+  command: "pg_basebackup -h {{ postgresql_master_ip }} -U replication -D {{ postgresql.directories.data }} -Fp -Xs -P -R"
+  become_user:  "{{ postgresql.config.user }}"
+  #become_method: 'sudo'
+  become: true
+
+- name: 'Postgres > Tasks > configure_slave.yml | Update pgsql data folder rights'
+  file:
+    path: "{{ postgresql.directories.data }}"
+    owner: "{{ postgresql.config.user }}"
+    group: "{{ postgresql.config.user }}"
+  become: true
+  become_user: "{{ postgresql.config.user }}"
+
+- name: 'Postgres > Tasks > install.yml | Update configuration to match slave'
+  template:
+    src: "postgresql.conf.j2"
+    dest:  "{{ postgresql.config.conf }}"
+    owner: "{{ postgresql.config.user }}"
+    group: "{{ postgresql.config.user }}"
+    mode: 0644
+  become: true
+
+- name: 'Postgres > Tasks > configure_slave.yml | Restart postgresql'
+  systemd:
+    name: "postgresql-{{ postgresql.server.version }}"
+    enabled: yes
+    state: started
+  become: true
+
+- name: 'Postgres > Tasks > configure_slave.yml | Hot standbay to allow select on slave'
+  postgresql_set:
+    name: "hot_standby"
+    value: "on"
+  become: true
+  become_user: "{{ postgresql.config.user }}"
+
+- name: 'Postgres > Tasks > configure_slave.yml | Restart postgresql'
+  systemd:
+    name: "postgresql-{{ postgresql.server.version }}"
+    enabled: yes
+    state: restarted
+  become: true

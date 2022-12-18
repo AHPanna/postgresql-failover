@@ -1,0 +1,34 @@
+- name: 'Postgres > Tasks > configure_master.yml | Create replication user used for replication'
+  postgresql_user:
+    name: "{{ postgresql_replication_user }}"
+    password: "{{ postgresql_replication_password }}"
+    state: present
+    role_attr_flags: REPLICATION
+  become_user: "{{ postgresql.config.user }}"
+  become: true
+
+- name: 'Postgres > Tasks > configure_master.yml |Whitelisting replication user for localhost and IP'
+  postgresql_pg_hba:
+    dest: "{{ postgresql.config.pg_hba }}"
+    contype: host
+    databases: replication
+    users: "{{ postgresql_replication_user }}"
+    source: "{{ item }}"
+    method: trust
+  become: true
+  become_user: "{{ postgresql.config.user }}"
+  with_items:
+    - "{{ postgresql_master_ip }}"
+    - 127.0.0.1/32
+
+- name: 'Postgres > Tasks > configure_master.yml | Cluster mode: Update pg_hba.conf with slave IP'
+  postgresql_pg_hba:
+    dest: "{{ postgresql.config.pg_hba }}"
+    contype: host
+    databases: "{{ postgresql_replication_user }}"
+    users: "{{ postgresql_replication_user }}"
+    source: "{{ postgresql_slave_ip }}"
+    method: trust
+  become: true
+  become_user: "{{ postgresql.config.user }}"
+  when: postgresql_cluster == true

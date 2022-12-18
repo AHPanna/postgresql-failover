@@ -1,0 +1,17 @@
+- name: 'Postgres Tasks > prerequisites.yml | Net mask'
+  set_fact:
+    net_mask: "{{ (ansible_default_ipv4.network + '/' + ansible_default_ipv4.netmask) | ipaddr('prefix') | string }}"
+  run_once: true
+
+- name: 'Postgres Tasks > prerequisites.yml | Setting master IP'
+  set_fact:
+    postgresql_subnet: "{{ hostvars[groups['postgresql_master'][0]]['ansible_default_ipv4']['address'] }}/{{ net_mask }}"
+
+- name: 'Postgres Tasks > prerequisites.yml | Setting master IP'
+  set_fact:
+    postgresql_master_ip: "{{ hostvars[groups['postgresql_master'][0]]['ansible_default_ipv4']['address'] }}"
+
+- name: 'Postgres Tasks > prerequisites.yml | Setting slave IP'
+  set_fact:
+    postgresql_slave_ip:  "{{ hostvars[groups['postgresql_slave'][0]]['ansible_default_ipv4']['address'] }}"
+  when:  postgresql.server.cluster == true

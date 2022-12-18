@@ -3,6 +3,7 @@ vrrp_script postgresql_health {
         script "/bin/bash /etc/keepalived/scripts/postgresql_health.sh"
         interval 2
         weight 2
+        user {{ keepalived.default_postgres_user }}
 }
 vrrp_instance VI_1 {
         interface {{ keepalived.default_keepalived_nic }}

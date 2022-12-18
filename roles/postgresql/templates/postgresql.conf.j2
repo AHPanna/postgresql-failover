@@ -1,0 +1,31 @@
+{% if postgresql.server.all_interfaces is sameas true %}
+listen_addresses = '*'
+{% else %}
+listen_addresses = '{{ ansible_default_ipv4.address|default(ansible_all_ipv4_addresses[0]) }}'
+{% endif %}
+#archive_mode = on
+#archive_command = 'cp %p {{ postgresql.config.archive_folder }}/%f'
+max_connections = {{ postgresql.parameters.max_connections }}
+shared_buffers = {{ postgresql.parameters.shared_buffers }}
+effective_cache_size = {{ postgresql.parameters.effective_cache_size }}
+maintenance_work_mem = {{ postgresql.parameters.maintenance_work_mem }}
+checkpoint_completion_target = {{ postgresql.parameters.checkpoint_completion_target }}
+wal_buffers = {{ postgresql.parameters.wal_buffers }}
+default_statistics_target = {{ postgresql.parameters.default_statistics_target }}
+random_page_cost = {{ postgresql.parameters.random_page_cost }}
+effective_io_concurrency = {{ postgresql.parameters.effective_io_concurrency }}
+work_mem = {{ postgresql.parameters.work_mem }}
+min_wal_size = {{ postgresql.parameters.min_wal_size }}
+max_wal_size = {{ postgresql.parameters.max_wal_size }}
+max_worker_processes = {{ postgresql.parameters.max_worker_processes }}
+max_parallel_workers_per_gather = {{ postgresql.parameters.max_parallel_workers_per_gather }}
+max_parallel_workers = {{ postgresql.parameters.max_parallel_workers }}
+max_parallel_maintenance_workers = {{ postgresql.parameters.max_parallel_maintenance_workers }}
+max_wal_senders =  {{ postgresql.parameters.max_wal_senders }}
+max_replication_slots =  {{ postgresql.parameters.max_replication_slots }}
+
+{% if inventory_hostname in groups['postgresql_slave'] and postgresql.server.cluster is sameas true %}
+promote_trigger_file = '{{ postgresql.directories.data }}/autopromote.trigger'
+primary_conninfo = 'host={{ postgresql_slave_ip }} port=5432 user=replication' # connection string to sending server
+primary_slot_name = 'replication_slot'     # replication slot on sending serve
+{% endif %}

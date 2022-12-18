@@ -1,0 +1,75 @@
+- name: 'Postgres > Tasks > keepalived.yml | Install keepalived packages'
+  package:
+    name: ["keepalived"]
+    state: installed
+  become: true
+
+- name: 'Postgres > Tasks > keepalived.yml | delete keepalived conf'
+  file:
+    path: "{{ keepalived.directories.conf }}/keepalived.conf"
+    state: absent
+  become: true
+
+- name: 'Postgres > Tasks > keepalived.yml | Creates keepalived scripts directory'
+  file:
+    path: "{{ keepalived.directories.conf }}/scripts/"
+    state: directory
+    recurse: yes
+  become: true
+
+- name: 'Postgres > Tasks > keepalived.yml | add keepalived conf'
+  template:
+    src: "keepalived.conf.j2"
+    dest:  "{{ keepalived.directories.conf }}"
+    mode: 0644
+  become: true
+
+- name: 'Postgres > Tasks > keepalived.yml | add scripts conf'
+  template:
+    src: "postgresql_health.sh.j2"
+    dest:  "{{ keepalived.directories.conf }}/scripts/"
+    mode: 0644
+  become: true
+
+- name: 'Postgres > Tasks > keepalived.yml | copy ssh authorized_keys'
+  copy:
+    src: "authorized_keys"
+    dest:  "{{ keepalived.directories.ssh }}"
+    mode: 0644
+    owner:  "{{ keepalived.default_postgres_user }}"
+    group: "{{ keepalived.default_postgres_user }}"
+
+- name: 'Postgres > Tasks > keepalived.yml | copy ssh id_rsa.pub'
+  copy:
+    src: "id_rsa.pub"
+    dest:  "{{ keepalived.directories.ssh }}"
+    mode: 0644
+    owner:  "{{ keepalived.default_postgres_user }}"
+    group: "{{ keepalived.default_postgres_user }}"
+
+- name: 'Postgres > Tasks > keepalived.yml | copy ssh id_rsa'
+  copy:
+    src: "id_rsa"
+    dest:  "{{ keepalived.directories.ssh }}"
+    mode: 0600
+    owner:  "{{ keepalived.default_postgres_user }}"
+    group: "{{ keepalived.default_postgres_user }}"
+
+- name: 'Postgres > Tasks > keepalived.yml | Update pg_hba.conf with keepalived IP'
+  postgresql_pg_hba:
+    dest: "{{ postgresql.config.pg_hba }}"
+    contype: host
+    databases: "all"
+    users: "all"
+    source: "{{ keepalived.default_keepalived_ip_vrrp }}"
+    method: trust
+  become: true
+  become_user: "{{ postgresql.config.user }}"
+  when: postgresql_cluster == true
+
+- name: 'Postgres > Tasks > keepalived.yml | Enable & start keepalived Service'
+  systemd:
+    name: "keepalived"
+    state: started
+    enabled: true
+  become: true

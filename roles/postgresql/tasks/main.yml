@@ -1,0 +1,35 @@
+
+- name: 'postgres > Tasks > main.yml | Prerequisites to install Postgresql'
+  include_tasks: 'prerequisites.yml'
+
+- name: 'postgres > Tasks > main.yml | Install Postgresql'
+  include_tasks: 'install.yml'
+
+- name: 'postgres > Tasks > main.yml | Setup postgres databases'
+  include_tasks: 'databases.yml'
+  with_items: "{{ postgresql.databases }}"
+  loop_control:
+    loop_var: database
+
+- name: 'postgres > Tasks > main.yml | Configure Slave'
+  include_tasks: 'configure_slave.yml'
+  when: inventory_hostname in groups['postgresql_slave'] and postgresql.server.cluster == true
+
+- name: 'postgres > Tasks > main.yml | Install Prometheus'
+  include_tasks: 'prometheus.yml'
+  when: postgresql.server.cluster == true
+
+- name: 'postgres > Tasks > main.yml | Uninstall'
+  include_tasks: 'uninstall.yml'
+  tags: [ never, uninstall ]
+
+- name: 'postgres > Tasks > main.yml | failover'
+  include_tasks: 'failover.yml'
+  tags: [ never, failover ]
+
+- name: 'postgres > Tasks > main.yml | Setup pg_hba for dev env'
+  include_tasks: 'dev.yml'
+  when: inventory_hostname in groups['postgresql_master'] and postgresql.server.all_interfaces == true and postgresql.server.cluster == false
+
+- name: 'postgres > Tasks > main.yml | Setup keepalived'
+  include_tasks: 'keepalived.yml'

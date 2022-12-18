@@ -1,0 +1,28 @@
+- name: "Postgresql > Tasks > databases.yml | Create User, database and whitelist the usage"
+  block:
+    - name: "Postgresql > Tasks > databases.yml | Create database {{ database.name }}"
+      postgresql_db:
+        name: "{{ database.name }}"
+
+    - name: "Postgresql > Tasks > databases.yml | Create user  {{ database.user }} for database {{ database.name }}"
+      postgresql_user:
+        db: "{{ database.name }}"
+        name: "{{ database.user }}"
+        password: "{{ database.password }}"
+        priv: "ALL"
+        expires: infinity
+
+    - name: "Postgresql > Tasks > databases.yml | Update pg_hba  {{ database.user }} for database {{ database.name }}"
+      postgresql_pg_hba:
+        dest: "{{ postgresql.directories.data }}/pg_hba.conf"
+        contype: host
+        databases: "{{ database.name }}"
+        users: "{{ database.user }}"
+        source: "{{ item }}"
+        method: "{{ postgresql.server.pg_hba_method }}"
+      with_items: "{{ database.source_ips }}"
+
+  become: true
+  run_once: true
+  become_user: "{{ postgresql.config.user }}"
+  when: inventory_hostname in groups['postgresql_master']

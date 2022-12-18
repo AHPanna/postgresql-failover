@@ -1,11 +1,69 @@
 ---
-postgresql:
-  test:""
-
 # keepalived conf
 keepalived:
-  default_keepalived_password: "p@ssorwd"
+  default_keepalived_password: "p@ssword"
   default_keepalived_nic: "eth0" # get on machine the default nic avalaible by : `ip -c a`
-  default_keepalived_ip_vrrp: "192.168.1.100" # choose on what your dhcp server provide range and the ip must be avalaible.
+  default_keepalived_ip_vrrp: "192.168.1.254" # choose on what your dhcp server provide range and the ip must be avalaible.
   priority_master: 100
   priority_slave: 101
+  default_postgres_user: "postgres"
+  directories:
+    ssh: "/var/lib/pgsql/.ssh"
+    conf: "/etc/keepalived"
+
+
+
+# Basic settings
+
+postgresql_version : 14
+
+postgresql:
+  server:
+    version: "{{postgresql_version}}"
+    cluster: false
+    port: 5432
+    all_interfaces: true
+    pg_hba_method: trust
+
+  directories:
+    data: "/var/lib/pgsql/{{ postgresql_version }}/data"
+    bin: "/usr/pgsql-{{ postgresql_version }}/bin"
+
+  config:
+    pg_hba: "/var/lib/pgsql/{{ postgresql_version }}/data/pg_hba.conf"
+    conf: "/var/lib/pgsql/{{ postgresql_version }}/data/postgresql.conf"
+    archive_folder: "/var/lib/pgsql/{{ postgresql_version }}/data/archive"
+    user: postgres
+
+  replication:
+    user: replication
+    database: replication
+    password: replication
+
+  # Please use: https://pgtune.leopard.in.ua/ to tune your postgresql.conf
+  parameters:
+    max_connections : 500
+    shared_buffers : 512MB
+    effective_cache_size : 1536MB
+    maintenance_work_mem : 128MB
+    checkpoint_completion_target : 0.9
+    wal_buffers : 16MB
+    default_statistics_target : 100
+    random_page_cost : 1.1
+    effective_io_concurrency : 200
+    work_mem : 524kB
+    min_wal_size : 1GB
+    max_wal_size : 4GB
+    max_worker_processes : 4
+    max_parallel_workers_per_gather : 2
+    max_parallel_workers : 4
+    max_parallel_maintenance_workers : 2
+    max_replication_slots: 20
+    max_wal_senders: 20
+
+  databases:
+    - name: logistic
+      user: logistic
+      password: p@s79res
+      source_ips: "{{ hostvars[inventory_hostname]['ansible_env'].SSH_CONNECTION.split(' ')[2] }}"
+      retention_policy: 'RECOVERY WINDOW OF 2 WEEKS'

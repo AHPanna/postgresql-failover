@@ -1,0 +1,51 @@
+- name: "Uninstall postgres"
+  block:
+    - name: 'Postgres > Tasks > uninstall.yml | Stop Postgresql Database'
+      systemd:
+        name: "postgresql-{{ postgresql.server.version }}"
+        state: stopped
+      ignore_errors: yes
+    - name: 'Postgresql > Tasks > uninstall.yml | Uninstall postgres packages'
+      package:
+        name: "postgresql{{ postgresql.server.version }}-*"
+        state: absent
+    - name: 'Postgresql > Tasks > uninstall.yml | Delete postgres folder'
+      file:
+        path: "/var/lib/pgsql/{{ postgresql.server.version }}/"
+        state: absent
+    - name: 'Postgresql > Tasks > uninstall.yml | Delete barman folder'
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - "{{ barman.configuration.home }}"
+        - "{{ barman.configuration.folder }}"
+        - "{{ barman.configuration.configuration_file}}"
+        - "{{ barman.configuration.log.file}}"
+    - name: 'Postgres > Tasks > uninstall.yml | Start porgresql exporter'
+      systemd:
+        name: postgres_exporter
+        state: stopped
+        enabled: false
+        daemon_reload: true
+      ignore_errors: yes
+    - name: 'Postgres > Tasks > uninstall.yml | Start barman exporter'
+      systemd:
+        name: barman-exporter
+        state: stopped
+        enabled: false
+        daemon_reload: true
+      ignore_errors: yes
+  become: true
+  tags:
+    - never
+    - uninstall
+
+- name: 'Postgres > Tasks > uninstall.yml | Remove Systemd'
+  file:
+    path: "{{ postgresql.prometheus.systemd }}"
+    state: absent
+  become: true
+  tags:
+    - never
+    - uninstall

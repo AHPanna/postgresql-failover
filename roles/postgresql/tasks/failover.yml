@@ -1,0 +1,11 @@
+- name: 'Postgres > Tasks > promote_slave.yml | Stop Postgresql On master'
+  systemd:
+    name: "postgresql-{{ postgresql.server.version }}"
+    state: stopped
+  become: true
+  ignore_errors: true
+  when: inventory_hostname in groups['postgresql_master'] and postgresql.server.cluster == true
+
+- name: 'Postgres > Tasks > promote_slave.yml | Auto Promote Slave to Master'
+  command: "touch {{ postgresql.directories.data }}/autopromote.trigger"
+  when: inventory_hostname in groups['postgresql_slave'] and postgresql.server.cluster == true

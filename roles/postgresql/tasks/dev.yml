@@ -1,0 +1,15 @@
+- name: "Postgresql > Tasks > dev.yml |Force pg hba to allow all"
+  copy:
+    src: pg_hba_dev.conf
+    dest: "{{ postgresql.config.pg_hba }}"
+    owner: "{{ postgresql.config.user }}"
+    group: "{{ postgresql.config.user }}"
+    mode: 0644
+  become: true
+
+- name: 'Postgres > Tasks > install.yml | Enable PostgreSQL database'
+  systemd:
+    name: "postgresql-{{ postgresql.server.version }}"
+    state: restarted
+    enabled: true
+  become: true

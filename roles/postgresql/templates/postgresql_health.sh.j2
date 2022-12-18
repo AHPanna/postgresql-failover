@@ -1,7 +1,11 @@
 #!/bin/bash
-master_ip="192.168.91.129"
-slave_ip="192.168.91.130"
-pg_ctl="/usr/pgsql-14/bin/pg_ctl"
-pg_home="/var/lib/pgsql/14/data/"
+master_ip="{{ postgresql_master_ip }}"
+slave_ip="{{ postgresql_slave_ip }}"
+pg_ctl="{{ postgresql.directories.bin }}/pg_ctl"
+pg_home="{{ postgresql.directories.data }}"
  
+{% if inventory_hostname in groups['postgresql_master'] %}
 (echo >/dev/tcp/"$master_ip"/5432) &>/dev/null && echo "All is OK"; exit 0 || ssh postgres@"$slave_ip" "$pg_ctl -D $pg_home promote"; exit 1
+{% elif inventory_hostname in groups['postgresql_slave'] %}
+(echo >/dev/tcp/"$slave_ip"/5432) &>/dev/null && echo "All is OK"; exit 0 || ssh postgres@"$master_ip" "$pg_ctl -D $pg_home promote"; exit 1
+{% endif %}
